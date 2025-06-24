@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { DaySelector } from './DaySelector';
 import type { WasteSchedule } from '@/pages/Index';
 
 interface AddScheduleDialogProps {
@@ -28,94 +28,73 @@ interface AddScheduleDialogProps {
 }
 
 const wasteTypes = [
-  { value: 'organic', label: 'Organico', color: 'bg-green-500', icon: '🗑️' },
-  { value: 'plastic', label: 'Plastica', color: 'bg-blue-500', icon: '♻️' },
-  { value: 'paper', label: 'Carta', color: 'bg-yellow-500', icon: '📄' },
-  { value: 'glass', label: 'Vetro', color: 'bg-purple-500', icon: '🫙' },
-  { value: 'mixed', label: 'Indifferenziato', color: 'bg-gray-500', icon: '🗑️' }
-] as const;
-
-const dayNames = [
-  { value: 0, label: 'Domenica' },
-  { value: 1, label: 'Lunedì' },
-  { value: 2, label: 'Martedì' },
-  { value: 3, label: 'Mercoledì' },
-  { value: 4, label: 'Giovedì' },
-  { value: 5, label: 'Venerdì' },
-  { value: 6, label: 'Sabato' }
+  { value: 'organic', label: 'Organico', icon: '🗑️', color: 'bg-green-500' },
+  { value: 'plastic', label: 'Plastica e Lattine', icon: '♻️', color: 'bg-blue-500' },
+  { value: 'paper', label: 'Carta e Cartone', icon: '📄', color: 'bg-yellow-500' },
+  { value: 'glass', label: 'Vetro', icon: '🫙', color: 'bg-green-600' },
+  { value: 'mixed', label: 'Indifferenziata', icon: '🗑️', color: 'bg-gray-500' }
 ];
 
 export const AddScheduleDialog = ({ open, onOpenChange, onAdd }: AddScheduleDialogProps) => {
-  const [name, setName] = useState('');
-  const [type, setType] = useState<WasteSchedule['type']>('organic');
+  const [selectedType, setSelectedType] = useState<string>('');
+  const [customName, setCustomName] = useState('');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || selectedDays.length === 0) {
-      return;
-    }
+    if (!selectedType || selectedDays.length === 0) return;
 
-    const wasteType = wasteTypes.find(w => w.value === type)!;
-    
-    onAdd({
-      type,
-      name: name.trim(),
+    const wasteType = wasteTypes.find(type => type.value === selectedType);
+    if (!wasteType) return;
+
+    const schedule: Omit<WasteSchedule, 'id'> = {
+      type: selectedType as any,
+      name: customName || wasteType.label,
       days: selectedDays,
       color: wasteType.color,
       icon: wasteType.icon
-    });
+    };
 
+    onAdd(schedule);
+    
     // Reset form
-    setName('');
-    setType('organic');
+    setSelectedType('');
+    setCustomName('');
     setSelectedDays([]);
     onOpenChange(false);
   };
 
-  const toggleDay = (day: number) => {
-    setSelectedDays(prev => 
-      prev.includes(day) 
-        ? prev.filter(d => d !== day)
-        : [...prev, day].sort()
-    );
-  };
+  const selectedWasteType = wasteTypes.find(type => type.value === selectedType);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Aggiungi calendario raccolta</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+              <span className="text-white text-sm">♻️</span>
+            </div>
+            Aggiungi Raccolta
+          </DialogTitle>
           <DialogDescription>
-            Configura un nuovo tipo di raccolta con i giorni della settimana.
+            Configura i giorni di raccolta per un tipo di rifiuto
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome raccolta</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="es. Organico, Plastica..."
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="type">Tipo di rifiuto</Label>
-            <Select value={type} onValueChange={(value: WasteSchedule['type']) => setType(value)}>
+            <Select value={selectedType} onValueChange={setSelectedType}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Seleziona il tipo di rifiuto" />
               </SelectTrigger>
               <SelectContent>
-                {wasteTypes.map((wasteType) => (
-                  <SelectItem key={wasteType.value} value={wasteType.value}>
+                {wasteTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
                     <div className="flex items-center gap-2">
-                      <span>{wasteType.icon}</span>
-                      <span>{wasteType.label}</span>
+                      <span>{type.icon}</span>
+                      {type.label}
                     </div>
                   </SelectItem>
                 ))}
@@ -123,34 +102,37 @@ export const AddScheduleDialog = ({ open, onOpenChange, onAdd }: AddScheduleDial
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Giorni di raccolta</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {dayNames.map((day) => (
-                <div key={day.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`day-${day.value}`}
-                    checked={selectedDays.includes(day.value)}
-                    onCheckedChange={() => toggleDay(day.value)}
-                  />
-                  <Label htmlFor={`day-${day.value}`} className="text-sm">
-                    {day.label}
-                  </Label>
-                </div>
-              ))}
+          {selectedType && (
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome personalizzato (opzionale)</Label>
+              <Input
+                id="name"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder={selectedWasteType?.label || ''}
+              />
             </div>
-          </div>
+          )}
+
+          <DaySelector 
+            selectedDays={selectedDays}
+            onDaysChange={setSelectedDays}
+          />
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Annulla
             </Button>
-            <Button 
+            <Button
               type="submit"
-              disabled={!name.trim() || selectedDays.length === 0}
+              disabled={!selectedType || selectedDays.length === 0}
               className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
             >
-              Aggiungi
+              Aggiungi Raccolta
             </Button>
           </DialogFooter>
         </form>

@@ -1,12 +1,21 @@
-
 import { useState, useEffect } from 'react';
-import { Calendar, Trash, Plus, Settings } from 'lucide-react';
+import { Calendar, Trash, Plus, Settings, Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { WasteTypeCard } from '@/components/WasteTypeCard';
 import { AddScheduleDialog } from '@/components/AddScheduleDialog';
 import { TodayOverview } from '@/components/TodayOverview';
+import { NotificationSettings } from '@/components/NotificationSettings';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
 
 export interface WasteSchedule {
@@ -22,7 +31,9 @@ export interface WasteSchedule {
 const Index = () => {
   const [schedules, setSchedules] = useState<WasteSchedule[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const { toast } = useToast();
+  const { scheduleTomorrowReminders } = useNotifications();
 
   // Load schedules from localStorage
   useEffect(() => {
@@ -102,6 +113,13 @@ const Index = () => {
     }
   }, [schedules]);
 
+  // Programma reminder quando cambiano gli schedule
+  useEffect(() => {
+    if (schedules.length > 0) {
+      scheduleTomorrowReminders(schedules);
+    }
+  }, [schedules, scheduleTomorrowReminders]);
+
   const addSchedule = (newSchedule: Omit<WasteSchedule, 'id'>) => {
     const schedule: WasteSchedule = {
       ...newSchedule,
@@ -109,7 +127,7 @@ const Index = () => {
     };
     setSchedules(prev => [...prev, schedule]);
     toast({
-      title: "Raccolta aggiunta!",
+      title: "Raccolta aggiunta! ♻️",
       description: `${schedule.name} è stata aggiunta al calendario.`,
     });
   };
@@ -140,13 +158,26 @@ const Index = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-green-200 hover:bg-green-50"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
+              <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-green-200 hover:bg-green-50"
+                  >
+                    <Bell className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Impostazioni Notifiche</DialogTitle>
+                    <DialogDescription>
+                      Configura i promemoria per la raccolta differenziata
+                    </DialogDescription>
+                  </DialogHeader>
+                  <NotificationSettings />
+                </DialogContent>
+              </Dialog>
               <Button
                 onClick={() => setShowAddDialog(true)}
                 className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"

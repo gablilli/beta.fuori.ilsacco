@@ -1,6 +1,8 @@
 
 import { useEffect } from 'react';
 
+let notificationScheduled = false; // Flag per evitare duplicati
+
 export const useNotifications = () => {
   const requestPermission = async () => {
     if ('Notification' in window) {
@@ -17,14 +19,14 @@ export const useNotifications = () => {
     if ('Notification' in window && Notification.permission === 'granted') {
       const now = new Date();
       const delay = when.getTime() - now.getTime();
-      
+
       if (delay > 0) {
         setTimeout(() => {
           new Notification(title, {
             body,
             icon: '/favicon.ico',
             badge: '/favicon.ico',
-            tag: 'waste-reminder'
+            tag: 'waste-reminder' // Usato per evitare notifiche visive duplicate
           });
         }, delay);
       }
@@ -32,20 +34,21 @@ export const useNotifications = () => {
   };
 
   const scheduleTomorrowReminders = (schedules: any[]) => {
+    if (notificationScheduled) return; // Evita pianificazioni multiple
+    notificationScheduled = true;
+
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowDay = tomorrow.getDay();
-    
-    const tomorrowSchedules = schedules.filter(schedule => 
+
+    const tomorrowSchedules = schedules.filter(schedule =>
       schedule.days.includes(tomorrowDay)
     );
 
     if (tomorrowSchedules.length > 0) {
-      // Programma notifica per le 19:00 di oggi
       const reminderTime = new Date();
       reminderTime.setHours(19, 0, 0, 0);
-      
-      // Se sono già oltre le 19, programma per le 8:00 di domani
+
       if (reminderTime.getTime() < Date.now()) {
         reminderTime.setDate(reminderTime.getDate() + 1);
         reminderTime.setHours(8, 0, 0, 0);
@@ -64,6 +67,7 @@ export const useNotifications = () => {
     requestPermission,
     scheduleNotification,
     scheduleTomorrowReminders,
-    hasPermission: () => 'Notification' in window && Notification.permission === 'granted'
+    hasPermission: () =>
+      'Notification' in window && Notification.permission === 'granted'
   };
 };

@@ -1,3 +1,4 @@
-# ♻️ Fuori il sacco: la nuova webapp per tracciare quando devi portare fuori la spazzatura
+# BETA
+## ♻️ Fuori il sacco: la nuova webapp per tracciare quando devi portare fuori la spazzatura
 Una webapp scritta in typescript (e in parte in react) per tracciare quando devi portare fuori la spazzatura, con reminder via notifica integrato e Out of the box experience, tutto in uno. 
-Completamente free and opensource, così non ti scordi di portare fuori l'immondizia mentre scrivi codice!
+### Completamente free and opensource, così non ti scordi di portare fuori l'immondizia mentre scrivi codice!

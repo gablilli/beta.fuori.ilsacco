@@ -35,30 +35,40 @@ const Index = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { scheduleTomorrowReminders } = useNotifications();
 
   // Load schedules from localStorage
   useEffect(() => {
+    console.log('Loading schedules from localStorage...');
     const saved = localStorage.getItem('waste-schedules');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      setSchedules(parsed.map((s: any) => ({
-        ...s,
-        nextCollection: s.nextCollection ? new Date(s.nextCollection) : undefined
-      })));
+      try {
+        const parsed = JSON.parse(saved);
+        console.log('Found schedules:', parsed);
+        setSchedules(parsed.map((s: any) => ({
+          ...s,
+          nextCollection: s.nextCollection ? new Date(s.nextCollection) : undefined
+        })));
+      } catch (error) {
+        console.error('Error parsing schedules:', error);
+        setShowOnboarding(true);
+      }
     } else {
-      // Show onboarding if no schedules exist
+      console.log('No schedules found, showing onboarding');
       setShowOnboarding(true);
     }
+    setIsLoading(false);
   }, []);
 
   // Save schedules to localStorage
   useEffect(() => {
-    if (schedules.length > 0) {
+    if (schedules.length > 0 && !isLoading) {
+      console.log('Saving schedules to localStorage:', schedules);
       localStorage.setItem('waste-schedules', JSON.stringify(schedules));
     }
-  }, [schedules]);
+  }, [schedules, isLoading]);
 
   // Calculate next collection dates
   useEffect(() => {
@@ -100,6 +110,7 @@ const Index = () => {
   }, [schedules, scheduleTomorrowReminders]);
 
   const handleOnboardingComplete = (newSchedules: Omit<WasteSchedule, 'id'>[]) => {
+    console.log('Onboarding completed with schedules:', newSchedules);
     const schedulesWithIds = newSchedules.map(schedule => ({
       ...schedule,
       id: Date.now().toString() + Math.random().toString()
@@ -132,8 +143,20 @@ const Index = () => {
     });
   };
 
-  // Show onboarding if no schedules
-  if (showOnboarding) {
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show onboarding if no schedules or explicitly requested
+  if (showOnboarding || schedules.length === 0) {
     return <OnboardingWizard onComplete={handleOnboardingComplete} />;
   }
 
@@ -198,34 +221,15 @@ const Index = () => {
             <h2 className="text-xl font-semibold text-gray-800">I tuoi calendari di raccolta</h2>
           </div>
           
-          {schedules.length === 0 ? (
-            <Card className="border-dashed border-2 border-green-200">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Trash className="h-12 w-12 text-green-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-600 mb-2">Nessuna raccolta configurata</h3>
-                <p className="text-gray-500 text-center mb-4">
-                  Aggiungi i giorni di raccolta per i diversi tipi di rifiuti nella tua zona
-                </p>
-                <Button 
-                  onClick={() => setShowAddDialog(true)}
-                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi prima raccolta
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {schedules.map((schedule) => (
-                <WasteTypeCard
-                  key={schedule.id}
-                  schedule={schedule}
-                  onRemove={() => removeSchedule(schedule.id)}
-                />
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {schedules.map((schedule) => (
+              <WasteTypeCard
+                key={schedule.id}
+                schedule={schedule}
+                onRemove={() => removeSchedule(schedule.id)}
+              />
+            ))}
+          </div>
         </div>
       </div>
 

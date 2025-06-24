@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Calendar, Trash, Plus, Settings, Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
 import { WasteTypeCard } from '@/components/WasteTypeCard';
 import { AddScheduleDialog } from '@/components/AddScheduleDialog';
 import { TodayOverview } from '@/components/TodayOverview';
+import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +32,7 @@ export interface WasteSchedule {
 
 const Index = () => {
   const [schedules, setSchedules] = useState<WasteSchedule[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const { toast } = useToast();
@@ -45,40 +48,16 @@ const Index = () => {
         nextCollection: s.nextCollection ? new Date(s.nextCollection) : undefined
       })));
     } else {
-      // Default example schedules
-      const defaultSchedules: WasteSchedule[] = [
-        {
-          id: '1',
-          type: 'organic',
-          name: 'Organico',
-          days: [1, 4], // Monday and Thursday
-          color: 'bg-green-500',
-          icon: '🗑️'
-        },
-        {
-          id: '2',
-          type: 'plastic',
-          name: 'Plastica',
-          days: [2], // Tuesday
-          color: 'bg-blue-500',
-          icon: '♻️'
-        },
-        {
-          id: '3',
-          type: 'paper',
-          name: 'Carta',
-          days: [3], // Wednesday
-          color: 'bg-yellow-500',
-          icon: '📄'
-        }
-      ];
-      setSchedules(defaultSchedules);
+      // Show onboarding if no schedules exist
+      setShowOnboarding(true);
     }
   }, []);
 
   // Save schedules to localStorage
   useEffect(() => {
-    localStorage.setItem('waste-schedules', JSON.stringify(schedules));
+    if (schedules.length > 0) {
+      localStorage.setItem('waste-schedules', JSON.stringify(schedules));
+    }
   }, [schedules]);
 
   // Calculate next collection dates
@@ -120,6 +99,19 @@ const Index = () => {
     }
   }, [schedules, scheduleTomorrowReminders]);
 
+  const handleOnboardingComplete = (newSchedules: Omit<WasteSchedule, 'id'>[]) => {
+    const schedulesWithIds = newSchedules.map(schedule => ({
+      ...schedule,
+      id: Date.now().toString() + Math.random().toString()
+    }));
+    setSchedules(schedulesWithIds);
+    setShowOnboarding(false);
+    toast({
+      title: "Configurazione completata! ♻️",
+      description: "Le tue raccolte sono state configurate con successo.",
+    });
+  };
+
   const addSchedule = (newSchedule: Omit<WasteSchedule, 'id'>) => {
     const schedule: WasteSchedule = {
       ...newSchedule,
@@ -139,6 +131,11 @@ const Index = () => {
       description: "La raccolta è stata rimossa dal calendario.",
     });
   };
+
+  // Show onboarding if no schedules
+  if (showOnboarding) {
+    return <OnboardingWizard onComplete={handleOnboardingComplete} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">

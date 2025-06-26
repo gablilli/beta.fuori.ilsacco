@@ -12,8 +12,8 @@ interface OnboardingWizardProps {
 }
 
 const wasteTypes = [
-  { value: 'organic', label: 'Organico', icon: '🗑️', color: 'bg-green-500', description: 'Scarti alimentari, avanzi' },
-  { value: 'plastic', label: 'Plastica e Lattine', icon: '♻️', color: 'bg-blue-500', description: 'Bottiglie, contenitori, lattine' },
+  { value: 'organic', label: 'Organico', icon: '🍌', color: 'bg-green-500', description: 'Scarti alimentari, avanzi' },
+  { value: 'plastic', label: 'Plastica e Lattine', icon: '🍶', color: 'bg-blue-500', description: 'Bottiglie, contenitori, lattine' },
   { value: 'paper', label: 'Carta e Cartone', icon: '📄', color: 'bg-yellow-500', description: 'Giornali, scatole, riviste' },
   { value: 'glass', label: 'Vetro', icon: '🫙', color: 'bg-green-600', description: 'Bottiglie, vasetti, contenitori' },
   { value: 'mixed', label: 'Indifferenziata', icon: '🗑️', color: 'bg-gray-500', description: 'Tutto il resto' }

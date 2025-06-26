@@ -1,7 +1,7 @@
 
 {
-  "name": "Fuori il sacco - Non scordarti della spazzatura",
-  "short_name": "EcoTracker",
+  "name": "Fuori il Sacco - Non scordarti della spazzatura",
+  "short_name": "Fuori il Sacco",
   "description": "Non dimenticare mai quando portare fuori i rifiuti",
   "start_url": "/",
   "display": "standalone",
@@ -29,7 +29,7 @@
       "sizes": "400x800",
       "type": "image/svg+xml",
       "form_factor": "narrow",
-      "label": "Dashboard EcoTracker"
+      "label": "Dashboard Fuori il Sacco"
     }
   ]
 }

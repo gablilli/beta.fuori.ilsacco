@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Calendar, Trash, Plus, Settings, Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -37,7 +36,7 @@ const Index = () => {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const { scheduleTomorrowReminders } = useNotifications();
+  const { scheduleTomorrowReminders, getSavedReminderTime } = useNotifications();
 
   // Load schedules from localStorage
   useEffect(() => {
@@ -105,9 +104,10 @@ const Index = () => {
   // Programma reminder quando cambiano gli schedule
   useEffect(() => {
     if (schedules.length > 0) {
-      scheduleTomorrowReminders(schedules);
+      const reminderHour = getSavedReminderTime();
+      scheduleTomorrowReminders(schedules, reminderHour);
     }
-  }, [schedules, scheduleTomorrowReminders]);
+  }, [schedules, scheduleTomorrowReminders, getSavedReminderTime]);
 
   const handleOnboardingComplete = (newSchedules: Omit<WasteSchedule, 'id'>[]) => {
     console.log('Onboarding completed with schedules:', newSchedules);

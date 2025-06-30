@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Trash, Plus, Settings, Bell } from 'lucide-react';
+import { Calendar, Trash, Plus, Settings, Bell, Home, Users, BarChart3, Save } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +22,8 @@ import { useToast } from '@/hooks/use-toast';
 import { CalendarView } from '@/components/CalendarView';
 import { VacationMode } from '@/components/VacationMode';
 import { FamilySharing } from '@/components/FamilySharing';
-import { WeatherWidget } from '@/components/WeatherWidget';
 import { Gamification } from '@/components/Gamification';
+import { BackupManager } from '@/components/BackupManager';
 
 export interface WasteSchedule {
   id: string;
@@ -35,13 +35,29 @@ export interface WasteSchedule {
   nextCollection?: Date;
 }
 
+interface UserStats {
+  totalCollections: number;
+  streak: number;
+  lastCollection: string;
+  achievements: string[];
+  level: number;
+  points: number;
+}
+
 const Index = () => {
   const [schedules, setSchedules] = useState<WasteSchedule[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<UserStats>({
+    totalCollections: 0,
+    streak: 0,
+    lastCollection: '',
+    achievements: [],
+    level: 1,
+    points: 0
+  });
   const { toast } = useToast();
   const { scheduleTomorrowReminders, getSavedReminderTime } = useNotifications();
 
@@ -83,12 +99,12 @@ const Index = () => {
       const currentDay = today.getDay();
       
       let nextCollection = new Date(today);
-      let daysUntilNext = 7; // Default to a week from now
+      let daysUntilNext = 7;
       
       for (const day of schedule.days) {
         let daysUntil = day - currentDay;
         if (daysUntil <= 0) {
-          daysUntil += 7; // Next week
+          daysUntil += 7;
         }
         if (daysUntil < daysUntilNext) {
           daysUntilNext = daysUntil;
@@ -116,6 +132,18 @@ const Index = () => {
       scheduleTomorrowReminders(schedules, reminderHour);
     }
   }, [schedules, scheduleTomorrowReminders, getSavedReminderTime]);
+
+  // Load stats
+  useEffect(() => {
+    const saved = localStorage.getItem('user-stats');
+    if (saved) {
+      setStats(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('user-stats', JSON.stringify(stats));
+  }, [stats]);
 
   const handleOnboardingComplete = (newSchedules: Omit<WasteSchedule, 'id'>[]) => {
     console.log('Onboarding completed with schedules:', newSchedules);
@@ -161,7 +189,66 @@ const Index = () => {
     setSchedules(prev => [...prev, ...newSchedules]);
   };
 
-  // Show loading state
+  const handleMarkCollectionDone = (collectionId: string, collectionName: string) => {
+    const today = new Date().toDateString();
+    const points = 10;
+    
+    if (stats.lastCollection === today) {
+      toast({
+        title: "Già fatto oggi! 🎯",
+        description: "Hai già segnato una raccolta per oggi"
+      });
+      return;
+    }
+
+    const newStats = {
+      ...stats,
+      totalCollections: stats.totalCollections + 1,
+      streak: stats.lastCollection === new Date(Date.now() - 86400000).toDateString() 
+        ? stats.streak + 1 
+        : 1,
+      lastCollection: today,
+      points: stats.points + points,
+      level: Math.floor((stats.points + points) / 100) + 1
+    };
+
+    const newAchievements = [...stats.achievements];
+    
+    if (newStats.totalCollections === 1 && !newAchievements.includes('first-collection')) {
+      newAchievements.push('first-collection');
+      toast({
+        title: "🏆 Primo Conferimento!",
+        description: "Hai segnato la tua prima raccolta!"
+      });
+    }
+    
+    if (newStats.streak === 7 && !newAchievements.includes('week-streak')) {
+      newAchievements.push('week-streak');
+      toast({
+        title: "🔥 Una Settimana di Fila!",
+        description: "7 giorni consecutivi di raccolta differenziata!"
+      });
+    }
+    
+    if (newStats.totalCollections === 50 && !newAchievements.includes('eco-warrior')) {
+      newAchievements.push('eco-warrior');
+      toast({
+        title: "🌱 Guerriero dell'Ambiente!",
+        description: "50 raccolte completate!"
+      });
+    }
+
+    setStats({
+      ...newStats,
+      achievements: newAchievements
+    });
+
+    toast({
+      title: `✅ ${collectionName} Conferito!`,
+      description: `+${points} punti! Streak: ${newStats.streak} giorni`
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center">
@@ -173,7 +260,6 @@ const Index = () => {
     );
   }
 
-  // Show onboarding if no schedules or explicitly requested
   if (showOnboarding || schedules.length === 0) {
     return <OnboardingWizard onComplete={handleOnboardingComplete} />;
   }
@@ -197,34 +283,31 @@ const Index = () => {
         return <FamilySharing schedules={schedules} onImportSchedules={importSchedules} />;
       case 'stats':
         return <Gamification schedules={schedules} />;
+      case 'backup':
+        return <BackupManager schedules={schedules} onImportSchedules={importSchedules} />;
       default:
         return (
           <div className="space-y-6">
-            <TodayOverview schedules={schedules} />
-            <WeatherWidget />
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Calendar className="h-5 w-5 text-green-600" />
-                <h2 className="text-xl font-semibold text-gray-800">I tuoi calendari di raccolta</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {schedules.map((schedule) => (
-                  <WasteTypeCard
-                    key={schedule.id}
-                    schedule={schedule}
-                    onRemove={() => removeSchedule(schedule.id)}
-                  />
-                ))}
-              </div>
-            </div>
+            <TodayOverview 
+              schedules={schedules} 
+              onMarkCollectionDone={handleMarkCollectionDone}
+            />
           </div>
         );
     }
   };
 
+  const tabs = [
+    { key: 'overview', label: 'Home', icon: Home, emoji: '🏠' },
+    { key: 'calendar', label: 'Calendario', icon: Calendar, emoji: '📅' },
+    { key: 'settings', label: 'Impostazioni', icon: Settings, emoji: '⚙️' },
+    { key: 'sharing', label: 'Famiglia', icon: Users, emoji: '👨‍👩‍👧‍👦' },
+    { key: 'stats', label: 'Statistiche', icon: BarChart3, emoji: '🎮' },
+    { key: 'backup', label: 'Backup', icon: Save, emoji: '💾' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 pb-20">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-green-100 sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
@@ -250,35 +333,43 @@ const Index = () => {
               </Button>
             </div>
           </div>
-          
-          {/* Navigation Tabs */}
-          <div className="flex gap-1 mt-4 bg-white/60 p-1 rounded-lg">
-            {[
-              { key: 'overview', label: '🏠 Home', icon: '🏠' },
-              { key: 'calendar', label: '📅 Calendario', icon: '📅' },
-              { key: 'settings', label: '⚙️ Impostazioni', icon: '⚙️' },
-              { key: 'sharing', label: '👨‍👩‍👧‍👦 Famiglia', icon: '👨‍👩‍👧‍👦' },
-              { key: 'stats', label: '🎮 Statistiche', icon: '🎮' }
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === tab.key
-                    ? 'bg-white text-green-700 shadow-sm'
-                    : 'text-gray-600 hover:text-green-700 hover:bg-white/50'
-                }`}
-              >
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden text-lg">{tab.icon}</span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
+      {/* Content */}
       <div className="container mx-auto px-4 py-6">
         {renderContent()}
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 z-50">
+        <div className="flex justify-around items-center py-2">
+          {tabs.map((tab) => {
+            const IconComponent = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex flex-col items-center p-3 rounded-lg transition-all duration-200 ${
+                  isActive 
+                    ? 'text-green-600 transform scale-110 animate-bounce' 
+                    : 'text-gray-500 hover:text-green-600'
+                }`}
+              >
+                <div className="hidden sm:block">
+                  <IconComponent className="h-5 w-5" />
+                </div>
+                <div className="sm:hidden text-xl">
+                  {tab.emoji}
+                </div>
+                <span className="text-xs font-medium mt-1 hidden sm:block">
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <AddScheduleDialog

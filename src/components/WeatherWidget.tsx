@@ -22,6 +22,8 @@ export const WeatherWidget = () => {
   const [customCity, setCustomCity] = useState('');
   const { toast } = useToast();
 
+  const API_KEY = '6983dc39d9fb1dae0e3acb394c03f8d9';
+
   const generateWeatherTip = (condition: string, temperature: number) => {
     let tip = '';
     switch (condition.toLowerCase()) {
@@ -53,30 +55,42 @@ export const WeatherWidget = () => {
       let url = '';
       
       if (city) {
-        url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=demo&units=metric&lang=it`;
+        url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=it`;
       } else {
         // Usa geolocalizzazione
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject);
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            timeout: 10000,
+            enableHighAccuracy: true
+          });
         });
         
-        url = `https://api.openweathermap.org/data/2.5/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}&appid=demo&units=metric&lang=it`;
+        url = `https://api.openweathermap.org/data/2.5/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}&appid=${API_KEY}&units=metric&lang=it`;
       }
 
-      // Simulazione dati (API demo)
-      const mockData: WeatherData = {
-        temperature: Math.round(15 + Math.random() * 15),
-        condition: ['clear', 'clouds', 'rain', 'wind'][Math.floor(Math.random() * 4)],
-        description: 'Condizioni simulate',
-        city: city || 'La tua posizione'
+      console.log('Fetching weather from:', url);
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Weather data:', data);
+
+      const weatherData: WeatherData = {
+        temperature: Math.round(data.main.temp),
+        condition: data.weather[0].main.toLowerCase(),
+        description: data.weather[0].description,
+        city: data.name || 'La tua posizione'
       };
 
-      setWeatherData(mockData);
-      setWeatherTip(generateWeatherTip(mockData.condition, mockData.temperature));
+      setWeatherData(weatherData);
+      setWeatherTip(generateWeatherTip(weatherData.condition, weatherData.temperature));
       
       toast({
         title: "🌤️ Meteo Aggiornato",
-        description: `Dati meteo per ${mockData.city}`
+        description: `Dati meteo per ${weatherData.city}`
       });
       
     } catch (error) {
@@ -127,7 +141,7 @@ export const WeatherWidget = () => {
   };
 
   return (
-    <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50">
+    <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50 h-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           {weatherData ? getWeatherIcon(weatherData.condition) : <Thermometer className="h-6 w-6" />}

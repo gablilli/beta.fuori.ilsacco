@@ -1,3 +1,4 @@
+
 import { Calendar, Clock, CheckCircle, AlertCircle, Target } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,7 +74,7 @@ export const TodayOverview = ({ schedules, onMarkCollectionDone }: TodayOverview
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Raccolta principale - 2 colonne */}
           <div className="lg:col-span-2">
-            <Card className="border-blue-500 bg-gradient-to-br from-blue-50 to-cyan-50 ring-2 ring-blue-200">
+            <Card className="border-blue-500 bg-gradient-to-br from-blue-50 to-cyan-50 ring-2 ring-blue-200 h-full">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl text-blue-800 flex items-center gap-2">
@@ -198,7 +199,7 @@ export const TodayOverview = ({ schedules, onMarkCollectionDone }: TodayOverview
       {nextCollections.length === 0 && todaysCollections.length === 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
-            <Card className="border-gray-200">
+            <Card className="border-gray-200 h-full">
               <CardContent className="flex items-center justify-center py-8">
                 <div className="text-center">
                   <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />

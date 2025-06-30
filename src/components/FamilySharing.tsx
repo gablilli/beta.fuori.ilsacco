@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,7 @@ interface FamilySharingProps {
 export const FamilySharing = ({ schedules, onImportSchedules }: FamilySharingProps) => {
   const [shareCode, setShareCode] = useState('');
   const [importCode, setImportCode] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const generateShareCode = () => {
@@ -35,6 +37,7 @@ export const FamilySharing = ({ schedules, onImportSchedules }: FamilySharingPro
     setShareCode(encoded);
     
     localStorage.setItem('share-code', encoded);
+    setIsDialogOpen(true);
     
     toast({
       title: "📤 Codice di Condivisione Generato",
@@ -114,40 +117,14 @@ export const FamilySharing = ({ schedules, onImportSchedules }: FamilySharingPro
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={generateShareCode}
-                  className="flex-1 w-full"
-                  disabled={schedules.length === 0}
-                >
-                  <QrCode className="h-4 w-4 mr-2" />
-                  Genera Codice
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Codice di Condivisione</DialogTitle>
-                  <DialogDescription>
-                    Condividi questo codice con la tua famiglia
-                  </DialogDescription>
-                </DialogHeader>
-                {shareCode && (
-                  <div className="space-y-4">
-                    <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                      <Label className="text-sm font-medium">Codice:</Label>
-                      <p className="text-xs font-mono bg-white p-2 rounded mt-1 break-all">
-                        {shareCode}
-                      </p>
-                    </div>
-                    <Button onClick={copyShareCode} className="w-full">
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copia Codice
-                    </Button>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
+            <Button 
+              onClick={generateShareCode}
+              className="flex-1 w-full"
+              disabled={schedules.length === 0}
+            >
+              <QrCode className="h-4 w-4 mr-2" />
+              Genera Codice
+            </Button>
           </div>
           
           <div className="border-t pt-4">
@@ -167,6 +144,31 @@ export const FamilySharing = ({ schedules, onImportSchedules }: FamilySharingPro
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Codice di Condivisione</DialogTitle>
+            <DialogDescription>
+              Condividi questo codice con la tua famiglia
+            </DialogDescription>
+          </DialogHeader>
+          {shareCode && (
+            <div className="space-y-4">
+              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                <Label className="text-sm font-medium">Codice:</Label>
+                <p className="text-xs font-mono bg-white p-2 rounded mt-1 break-all">
+                  {shareCode}
+                </p>
+              </div>
+              <Button onClick={copyShareCode} className="w-full">
+                <Copy className="h-4 w-4 mr-2" />
+                Copia Codice
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

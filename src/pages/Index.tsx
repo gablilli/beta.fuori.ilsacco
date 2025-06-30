@@ -19,6 +19,11 @@ import { NotificationSettings } from '@/components/NotificationSettings';
 import { EmojiCustomizer } from '@/components/EmojiCustomizer';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
+import { CalendarView } from '@/components/CalendarView';
+import { VacationMode } from '@/components/VacationMode';
+import { FamilySharing } from '@/components/FamilySharing';
+import { WeatherWidget } from '@/components/WeatherWidget';
+import { Gamification } from '@/components/Gamification';
 
 export interface WasteSchedule {
   id: string;
@@ -35,6 +40,7 @@ const Index = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { scheduleTomorrowReminders, getSavedReminderTime } = useNotifications();
@@ -151,6 +157,10 @@ const Index = () => {
     ));
   };
 
+  const importSchedules = (newSchedules: WasteSchedule[]) => {
+    setSchedules(prev => [...prev, ...newSchedules]);
+  };
+
   // Show loading state
   if (isLoading) {
     return (
@@ -167,6 +177,51 @@ const Index = () => {
   if (showOnboarding || schedules.length === 0) {
     return <OnboardingWizard onComplete={handleOnboardingComplete} />;
   }
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'calendar':
+        return <CalendarView schedules={schedules} />;
+      case 'settings':
+        return (
+          <div className="space-y-6">
+            <NotificationSettings />
+            <VacationMode />
+            <EmojiCustomizer 
+              schedules={schedules} 
+              onUpdateSchedule={updateSchedule}
+            />
+          </div>
+        );
+      case 'sharing':
+        return <FamilySharing schedules={schedules} onImportSchedules={importSchedules} />;
+      case 'stats':
+        return <Gamification schedules={schedules} />;
+      default:
+        return (
+          <div className="space-y-6">
+            <TodayOverview schedules={schedules} />
+            <WeatherWidget />
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="h-5 w-5 text-green-600" />
+                <h2 className="text-xl font-semibold text-gray-800">I tuoi calendari di raccolta</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {schedules.map((schedule) => (
+                  <WasteTypeCard
+                    key={schedule.id}
+                    schedule={schedule}
+                    onRemove={() => removeSchedule(schedule.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
@@ -186,32 +241,6 @@ const Index = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-green-200 hover:bg-green-50"
-                  >
-                    <Bell className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>⚙️ Impostazioni</DialogTitle>
-                    <DialogDescription>
-                      Configura notifiche ed emoji per la raccolta differenziata
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-6">
-                    <NotificationSettings />
-                    <EmojiCustomizer 
-                      schedules={schedules} 
-                      onUpdateSchedule={updateSchedule}
-                    />
-                  </div>
-                </DialogContent>
-              </Dialog>
               <Button
                 onClick={() => setShowAddDialog(true)}
                 className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
@@ -221,30 +250,35 @@ const Index = () => {
               </Button>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Today's Overview */}
-        <TodayOverview schedules={schedules} />
-
-        {/* Waste Types Grid */}
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="h-5 w-5 text-green-600" />
-            <h2 className="text-xl font-semibold text-gray-800">I tuoi calendari di raccolta</h2>
-          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {schedules.map((schedule) => (
-              <WasteTypeCard
-                key={schedule.id}
-                schedule={schedule}
-                onRemove={() => removeSchedule(schedule.id)}
-              />
+          {/* Navigation Tabs */}
+          <div className="flex gap-1 mt-4 bg-white/60 p-1 rounded-lg">
+            {[
+              { key: 'overview', label: '🏠 Home', icon: '🏠' },
+              { key: 'calendar', label: '📅 Calendario', icon: '📅' },
+              { key: 'settings', label: '⚙️ Impostazioni', icon: '⚙️' },
+              { key: 'sharing', label: '👨‍👩‍👧‍👦 Famiglia', icon: '👨‍👩‍👧‍👦' },
+              { key: 'stats', label: '🎮 Statistiche', icon: '🎮' }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-white text-green-700 shadow-sm'
+                    : 'text-gray-600 hover:text-green-700 hover:bg-white/50'
+                }`}
+              >
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden text-lg">{tab.icon}</span>
+              </button>
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-6">
+        {renderContent()}
       </div>
 
       <AddScheduleDialog

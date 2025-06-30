@@ -1,8 +1,12 @@
 
 import { useEffect } from 'react';
 
-let notificationScheduled = false; // Flag per evitare duplicati
-let currentTimeoutId: NodeJS.Timeout | null = null; // Per cancellare timeout precedenti
+// Gestione globale per evitare duplicati
+let globalNotificationState = {
+  isScheduled: false,
+  currentTimeoutId: null as NodeJS.Timeout | null,
+  lastScheduleDate: null as string | null
+};
 
 export const useNotifications = () => {
   const requestPermission = async () => {
@@ -21,80 +25,114 @@ export const useNotifications = () => {
       const now = new Date();
       const delay = when.getTime() - now.getTime();
 
+      console.log('Scheduling notification for:', when, 'delay:', delay);
+
       if (delay > 0) {
-        setTimeout(() => {
+        return setTimeout(() => {
+          console.log('Showing notification:', title, body);
           new Notification(title, {
             body,
             icon: '/favicon.ico',
             badge: '/favicon.ico',
-            tag: 'waste-reminder', // Previene notifiche duplicate
-            requireInteraction: false, // Non richiede interazione per chiudersi
+            tag: 'waste-reminder',
+            requireInteraction: true,
             silent: false
           });
         }, delay);
       }
     }
+    return null;
+  };
+
+  const clearExistingSchedule = () => {
+    if (globalNotificationState.currentTimeoutId) {
+      clearTimeout(globalNotificationState.currentTimeoutId);
+      globalNotificationState.currentTimeoutId = null;
+    }
+    globalNotificationState.isScheduled = false;
+    console.log('Cleared existing notification schedule');
   };
 
   const scheduleTomorrowReminders = (schedules: any[], reminderHour: number = 19) => {
-    // Cancella timeout precedente se esiste
-    if (currentTimeoutId) {
-      clearTimeout(currentTimeoutId);
-      currentTimeoutId = null;
+    const today = new Date().toDateString();
+    
+    // Evita di riprogrammare se già fatto oggi
+    if (globalNotificationState.isScheduled && globalNotificationState.lastScheduleDate === today) {
+      console.log('Notifications already scheduled for today');
+      return;
     }
 
-    // Reset del flag ogni 24 ore
-    const resetScheduleFlag = () => {
-      notificationScheduled = false;
-    };
-
-    if (notificationScheduled) return; // Evita pianificazioni multiple
-    notificationScheduled = true;
-
-    // Reset del flag dopo 24 ore
-    setTimeout(resetScheduleFlag, 24 * 60 * 60 * 1000);
+    // Cancella programma precedente
+    clearExistingSchedule();
 
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowDay = tomorrow.getDay();
+    const tomorrowDateString = tomorrow.toDateString();
+
+    console.log('Checking schedules for tomorrow:', tomorrowDateString, 'day:', tomorrowDay);
 
     const tomorrowSchedules = schedules.filter(schedule =>
       schedule.days.includes(tomorrowDay)
     );
 
-    if (tomorrowSchedules.length > 0) {
-      const reminderTime = new Date();
-      reminderTime.setHours(reminderHour, 0, 0, 0);
+    console.log('Tomorrow schedules found:', tomorrowSchedules);
 
-      // Se l'orario è già passato oggi, programma per domani mattina
-      if (reminderTime.getTime() < Date.now()) {
+    if (tomorrowSchedules.length > 0) {
+      const now = new Date();
+      const reminderTime = new Date();
+      
+      // Imposta l'orario di promemoria
+      reminderTime.setHours(reminderHour, 0, 0, 0);
+      
+      // Se l'orario è già passato oggi, programma per domani alle 8:00
+      if (reminderTime.getTime() <= now.getTime()) {
         reminderTime.setDate(reminderTime.getDate() + 1);
         reminderTime.setHours(8, 0, 0, 0);
       }
 
-      const wasteTypes = tomorrowSchedules.map(s => s.name).join(', ');
+      const wasteTypes = tomorrowSchedules.map(s => `${s.icon} ${s.name}`).join(', ');
       
-      currentTimeoutId = setTimeout(() => {
-        scheduleNotification(
-          '♻️ Promemoria Raccolta Differenziata',
-          `Ricordati di portare fuori: ${wasteTypes}`,
-          reminderTime
-        );
-      }, 1000) as NodeJS.Timeout; // Piccolo delay per evitare spam
+      console.log('Scheduling reminder for:', reminderTime);
+      
+      globalNotificationState.currentTimeoutId = scheduleNotification(
+        '♻️ Promemoria Raccolta Differenziata',
+        `Domani ${tomorrowDateString.split(' ')[0]} porta fuori: ${wasteTypes}`,
+        reminderTime
+      );
+
+      if (globalNotificationState.currentTimeoutId) {
+        globalNotificationState.isScheduled = true;
+        globalNotificationState.lastScheduleDate = today;
+        console.log('Notification scheduled successfully');
+      }
+    } else {
+      console.log('No waste collection tomorrow');
     }
   };
 
-  // Funzione per ottenere l'orario salvato
   const getSavedReminderTime = (): number => {
     const saved = localStorage.getItem('reminder-time');
     return saved ? parseInt(saved) : 19;
   };
 
-  // Funzione per salvare l'orario
   const saveReminderTime = (hour: number) => {
     localStorage.setItem('reminder-time', hour.toString());
-    // Reset del flag per permettere riprogrammazione
-    notificationScheduled = false;
+    // Reset per permettere riprogrammazione con nuovo orario
+    globalNotificationState.isScheduled = false;
+    globalNotificationState.lastScheduleDate = null;
+    console.log('Reminder time saved:', hour);
+  };
+
+  // Test notifica immediata
+  const testNotification = () => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🧪 Test Notifica', {
+        body: 'Le notifiche funzionano correttamente!',
+        icon: '/favicon.ico',
+        tag: 'test-notification'
+      });
+    }
   };
 
   return {
@@ -103,6 +141,8 @@ export const useNotifications = () => {
     scheduleTomorrowReminders,
     getSavedReminderTime,
     saveReminderTime,
+    clearExistingSchedule,
+    testNotification,
     hasPermission: () =>
       'Notification' in window && Notification.permission === 'granted'
   };

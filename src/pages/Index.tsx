@@ -16,6 +16,7 @@ import { AddScheduleDialog } from '@/components/AddScheduleDialog';
 import { TodayOverview } from '@/components/TodayOverview';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { NotificationSettings } from '@/components/NotificationSettings';
+import { EmojiCustomizer } from '@/components/EmojiCustomizer';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
 
@@ -101,10 +102,11 @@ const Index = () => {
     }
   }, [schedules]);
 
-  // Programma reminder quando cambiano gli schedule
+  // Programma reminder quando cambiano gli schedule o l'orario
   useEffect(() => {
     if (schedules.length > 0) {
       const reminderHour = getSavedReminderTime();
+      console.log('Scheduling reminders with hour:', reminderHour);
       scheduleTomorrowReminders(schedules, reminderHour);
     }
   }, [schedules, scheduleTomorrowReminders, getSavedReminderTime]);
@@ -126,7 +128,7 @@ const Index = () => {
   const addSchedule = (newSchedule: Omit<WasteSchedule, 'id'>) => {
     const schedule: WasteSchedule = {
       ...newSchedule,
-      id: Date.now().toString()
+      id: Date.now().toString() + Math.random().toString()
     };
     setSchedules(prev => [...prev, schedule]);
     toast({
@@ -141,6 +143,12 @@ const Index = () => {
       title: "Raccolta rimossa",
       description: "La raccolta è stata rimossa dal calendario.",
     });
+  };
+
+  const updateSchedule = (id: string, updates: Partial<WasteSchedule>) => {
+    setSchedules(prev => prev.map(s => 
+      s.id === id ? { ...s, ...updates } : s
+    ));
   };
 
   // Show loading state
@@ -188,14 +196,20 @@ const Index = () => {
                     <Bell className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Impostazioni Notifiche</DialogTitle>
+                    <DialogTitle>⚙️ Impostazioni</DialogTitle>
                     <DialogDescription>
-                      Configura i promemoria per la raccolta differenziata
+                      Configura notifiche ed emoji per la raccolta differenziata
                     </DialogDescription>
                   </DialogHeader>
-                  <NotificationSettings />
+                  <div className="space-y-6">
+                    <NotificationSettings />
+                    <EmojiCustomizer 
+                      schedules={schedules} 
+                      onUpdateSchedule={updateSchedule}
+                    />
+                  </div>
                 </DialogContent>
               </Dialog>
               <Button

@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 
 // Gestione globale per evitare duplicati
@@ -44,6 +43,18 @@ export const useNotifications = () => {
     return null;
   };
 
+  const isInVacationMode = () => {
+    const vacation = localStorage.getItem('vacation-mode');
+    if (!vacation) return false;
+    
+    const data = JSON.parse(vacation);
+    const now = new Date();
+    const start = new Date(data.start);
+    const end = new Date(data.end);
+    
+    return now >= start && now <= end;
+  };
+
   const clearExistingSchedule = () => {
     if (globalNotificationState.currentTimeoutId) {
       clearTimeout(globalNotificationState.currentTimeoutId);
@@ -54,6 +65,13 @@ export const useNotifications = () => {
   };
 
   const scheduleTomorrowReminders = (schedules: any[], reminderHour: number = 19) => {
+    // Controlla modalità vacanza
+    if (isInVacationMode()) {
+      console.log('Vacation mode active, skipping notifications');
+      clearExistingSchedule();
+      return;
+    }
+
     const today = new Date().toDateString();
     
     // Evita di riprogrammare se già fatto oggi

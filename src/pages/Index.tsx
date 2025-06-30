@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Calendar, Trash, Plus, Settings, Bell, Home, Users, BarChart3, Save } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -307,7 +308,7 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 pb-24">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-green-100 sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
@@ -341,34 +342,40 @@ const Index = () => {
         {renderContent()}
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 z-50">
-        <div className="flex justify-around items-center py-2">
-          {tabs.map((tab) => {
-            const IconComponent = tab.icon;
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex flex-col items-center p-3 rounded-lg transition-all duration-200 ${
-                  isActive 
-                    ? 'text-green-600 transform scale-110 animate-bounce' 
-                    : 'text-gray-500 hover:text-green-600'
-                }`}
-              >
-                <div className="hidden sm:block">
-                  <IconComponent className="h-5 w-5" />
-                </div>
-                <div className="sm:hidden text-xl">
-                  {tab.emoji}
-                </div>
-                <span className="text-xs font-medium mt-1 hidden sm:block">
-                  {tab.label}
-                </span>
-              </button>
-            );
-          })}
+      {/* Mobile Bottom Navigation - Fluttuante */}
+      <div className="fixed bottom-4 left-4 right-4 z-50">
+        <div className="bg-white/95 backdrop-blur-lg border border-gray-200 rounded-2xl shadow-2xl shadow-black/10">
+          <div className="flex justify-around items-center py-3 px-2">
+            {tabs.map((tab) => {
+              const IconComponent = tab.icon;
+              const isActive = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex flex-col items-center p-3 rounded-xl transition-all duration-300 ease-out ${
+                    isActive 
+                      ? 'text-green-600 bg-green-50 transform scale-110 shadow-lg shadow-green-200/50' 
+                      : 'text-gray-500 hover:text-green-600 hover:bg-green-50/50 hover:scale-105'
+                  }`}
+                  style={{
+                    transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  <div className="hidden sm:block">
+                    <IconComponent className="h-5 w-5" />
+                  </div>
+                  <div className="sm:hidden text-xl">
+                    {tab.emoji}
+                  </div>
+                  <span className="text-xs font-medium mt-1 hidden sm:block">
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

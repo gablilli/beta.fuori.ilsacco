@@ -1,16 +1,26 @@
 
 import { useState, useEffect } from 'react';
-import { Bell, BellOff, Clock } from 'lucide-react';
+import { Bell, BellOff, Clock, TestTube } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
 
 export const NotificationSettings = () => {
   const [hasPermission, setHasPermission] = useState(false);
   const [reminderTime, setReminderTime] = useState(19);
-  const { requestPermission, hasPermission: checkPermission, getSavedReminderTime, saveReminderTime } = useNotifications();
+  const [customHour, setCustomHour] = useState('');
+  const { 
+    requestPermission, 
+    hasPermission: checkPermission, 
+    getSavedReminderTime, 
+    saveReminderTime,
+    testNotification,
+    clearExistingSchedule
+  } = useNotifications();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,21 +57,58 @@ export const NotificationSettings = () => {
   const handleTimeChange = (value: string) => {
     const hour = parseInt(value);
     setReminderTime(hour);
+    clearExistingSchedule(); // Cancella il programma precedente
     saveReminderTime(hour);
     toast({
       title: "Orario aggiornato! ⏰",
-      description: `Promemoria programmati per le ${hour}:00.`,
+      description: `Promemoria riprogrammati per le ${hour}:00.`,
     });
   };
 
+  const handleCustomTimeSet = () => {
+    const hour = parseInt(customHour);
+    if (hour >= 0 && hour <= 23) {
+      setReminderTime(hour);
+      clearExistingSchedule();
+      saveReminderTime(hour);
+      setCustomHour('');
+      toast({
+        title: "Orario personalizzato impostato! ⏰",
+        description: `Promemoria riprogrammati per le ${hour}:00.`,
+      });
+    } else {
+      toast({
+        title: "Orario non valido",
+        description: "Inserisci un'ora tra 0 e 23.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleTestNotification = () => {
+    if (hasPermission) {
+      testNotification();
+      toast({
+        title: "Test inviato! 🧪",
+        description: "Controlla se hai ricevuto la notifica di test.",
+      });
+    } else {
+      toast({
+        title: "Permessi mancanti",
+        description: "Attiva prima le notifiche per testare.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const timeOptions = [
-    { value: "8", label: "8:00" },
-    { value: "9", label: "9:00" },
-    { value: "17", label: "17:00" },
-    { value: "18", label: "18:00" },
-    { value: "19", label: "19:00" },
-    { value: "20", label: "20:00" },
-    { value: "21", label: "21:00" },
+    { value: "6", label: "6:00 (Mattina presto)" },
+    { value: "7", label: "7:00 (Mattina)" },
+    { value: "8", label: "8:00 (Mattina)" },
+    { value: "18", label: "18:00 (Sera)" },
+    { value: "19", label: "19:00 (Sera)" },
+    { value: "20", label: "20:00 (Sera)" },
+    { value: "21", label: "21:00 (Sera tardi)" },
   ];
 
   return (
@@ -86,11 +133,11 @@ export const NotificationSettings = () => {
                 </span>
               </div>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Orario promemoria
-                </label>
+                  Orario promemoria predefiniti
+                </Label>
                 <Select value={reminderTime.toString()} onValueChange={handleTimeChange}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -104,6 +151,39 @@ export const NotificationSettings = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-700">
+                  Orario personalizzato (0-23)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={customHour}
+                    onChange={(e) => setCustomHour(e.target.value)}
+                    placeholder="es. 15"
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={handleCustomTimeSet}
+                    disabled={!customHour}
+                    variant="outline"
+                  >
+                    Imposta
+                  </Button>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleTestNotification}
+                variant="outline"
+                className="w-full"
+              >
+                <TestTube className="h-4 w-4 mr-2" />
+                Testa Notifica
+              </Button>
             </div>
           ) : (
             <div className="space-y-3">

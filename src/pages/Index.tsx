@@ -22,9 +22,12 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarView } from '@/components/CalendarView';
 import { VacationMode } from '@/components/VacationMode';
-import { FamilySharing } from '@/components/FamilySharing';
+import { ImprovedFamilySharing } from '@/components/ImprovedFamilySharing';
 import { Gamification } from '@/components/Gamification';
 import { BackupManager } from '@/components/BackupManager';
+import { AuthWrapper } from '@/components/AuthWrapper';
+import { ImprovedWeatherWidget } from '@/components/ImprovedWeatherWidget';
+import { User, Session } from '@supabase/supabase-js';
 
 export interface WasteSchedule {
   id: string;
@@ -45,7 +48,14 @@ interface UserStats {
   points: number;
 }
 
-const Index = () => {
+interface IndexProps {
+  user?: User | null;
+  session?: Session | null;
+  onShowAuth?: () => void;
+  onSignOut?: () => void;
+}
+
+const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
   const [schedules, setSchedules] = useState<WasteSchedule[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -155,8 +165,8 @@ const Index = () => {
     setSchedules(schedulesWithIds);
     setShowOnboarding(false);
     toast({
-      title: "Configurazione completata! ♻️",
-      description: "Le tue raccolte sono state configurate con successo.",
+      title: "Tutto pronto! ♻️",
+      description: "I tuoi promemoria spazzatura sono attivi.",
     });
   };
 
@@ -281,7 +291,7 @@ const Index = () => {
           </div>
         );
       case 'sharing':
-        return <FamilySharing schedules={schedules} onImportSchedules={importSchedules} />;
+        return <ImprovedFamilySharing schedules={schedules} onImportSchedules={importSchedules} user={user} />;
       case 'stats':
         return <Gamification schedules={schedules} />;
       case 'backup':
@@ -293,6 +303,7 @@ const Index = () => {
               schedules={schedules} 
               onMarkCollectionDone={handleMarkCollectionDone}
             />
+            <ImprovedWeatherWidget />
           </div>
         );
     }

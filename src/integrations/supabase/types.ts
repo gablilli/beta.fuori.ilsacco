@@ -9,7 +9,134 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          skip_onboarding: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          skip_onboarding?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          skip_onboarding?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shared_calendars: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          owner_id: string | null
+          share_code: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          owner_id?: string | null
+          share_code: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string | null
+          share_code?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shared_schedules: {
+        Row: {
+          calendar_id: string | null
+          color: string
+          created_at: string | null
+          days: number[]
+          icon: string
+          id: string
+          name: string
+          type: string
+        }
+        Insert: {
+          calendar_id?: string | null
+          color: string
+          created_at?: string | null
+          days: number[]
+          icon: string
+          id?: string
+          name: string
+          type: string
+        }
+        Update: {
+          calendar_id?: string | null
+          color?: string
+          created_at?: string | null
+          days?: number[]
+          icon?: string
+          id?: string
+          name?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_schedules_calendar_id_fkey"
+            columns: ["calendar_id"]
+            isOneToOne: false
+            referencedRelation: "shared_calendars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weather_cache: {
+        Row: {
+          cached_at: string | null
+          city: string
+          condition: string
+          description: string
+          expires_at: string | null
+          id: string
+          temperature: number
+        }
+        Insert: {
+          cached_at?: string | null
+          city: string
+          condition: string
+          description: string
+          expires_at?: string | null
+          id?: string
+          temperature: number
+        }
+        Update: {
+          cached_at?: string | null
+          city?: string
+          condition?: string
+          description?: string
+          expires_at?: string | null
+          id?: string
+          temperature?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

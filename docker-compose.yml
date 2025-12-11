@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  fuori-il-sacco:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fuori-il-sacco
+    ports:
+      - "${PORT:-8080}:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    labels:
+      - "com.docker.compose.project=fuori-il-sacco"
+    networks:
+      - fuori-il-sacco-network
+
+networks:
+  fuori-il-sacco-network:
+    driver: bridge

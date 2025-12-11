@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Calendar, Trash, Plus, Settings, Bell, Home, Users, BarChart3, Save } from 'lucide-react';
+import { Calendar, Trash, Plus, Settings, Bell, Home, Users, BarChart3, Save, Info, Flame } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,8 @@ import { Gamification } from '@/components/Gamification';
 import { BackupManager } from '@/components/BackupManager';
 import { AuthWrapper } from '@/components/AuthWrapper';
 import { ImprovedWeatherWidget } from '@/components/ImprovedWeatherWidget';
+import { AppInfo } from '@/components/AppInfo';
+import { StreakPage } from '@/components/StreakPage';
 import { User, Session } from '@supabase/supabase-js';
 
 export interface WasteSchedule {
@@ -103,9 +105,16 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
     }
   }, [schedules, isLoading]);
 
-  // Calculate next collection dates
+  // Calculate next collection dates when schedules change
   useEffect(() => {
+    if (schedules.length === 0 || isLoading) return;
+    
     const updatedSchedules = schedules.map(schedule => {
+      // Skip if already has nextCollection that's still valid
+      if (schedule.nextCollection && new Date(schedule.nextCollection) > new Date()) {
+        return schedule;
+      }
+      
       const today = new Date();
       const currentDay = today.getDay();
       
@@ -130,10 +139,17 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
       };
     });
     
-    if (JSON.stringify(updatedSchedules) !== JSON.stringify(schedules)) {
+    // Only update if there are actual changes
+    const hasChanges = updatedSchedules.some((updated, index) => {
+      const current = schedules[index];
+      return !current.nextCollection || 
+             new Date(updated.nextCollection).getTime() !== new Date(current.nextCollection).getTime();
+    });
+    
+    if (hasChanges) {
       setSchedules(updatedSchedules);
     }
-  }, [schedules]);
+  }, [schedules.length, isLoading]);
 
   // Programma reminder quando cambiano gli schedule o l'orario
   useEffect(() => {
@@ -201,10 +217,11 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
   };
 
   const handleMarkCollectionDone = (collectionId: string, collectionName: string) => {
-    const today = new Date().toDateString();
+    const today = new Date().toISOString().split('T')[0]; // Use ISO date format
+    const todayDisplay = new Date().toDateString();
     const points = 10;
     
-    if (stats.lastCollection === today) {
+    if (stats.lastCollection === todayDisplay) {
       toast({
         title: "Già fatto oggi! 🎯",
         description: "Hai già segnato una raccolta per oggi"
@@ -218,10 +235,34 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
       streak: stats.lastCollection === new Date(Date.now() - 86400000).toDateString() 
         ? stats.streak + 1 
         : 1,
-      lastCollection: today,
+      lastCollection: todayDisplay,
       points: stats.points + points,
       level: Math.floor((stats.points + points) / 100) + 1
     };
+
+    // Update best streak
+    const currentBestStreak = localStorage.getItem('best-streak');
+    const bestStreak = currentBestStreak ? parseInt(currentBestStreak, 10) : 0;
+    if (newStats.streak > bestStreak) {
+      localStorage.setItem('best-streak', newStats.streak.toString());
+    }
+
+    // Update collection history
+    const savedHistory = localStorage.getItem('collection-history');
+    const history = savedHistory ? JSON.parse(savedHistory) : [];
+    const todayHistory = history.find((h: any) => h.date === today);
+    
+    if (todayHistory) {
+      todayHistory.count += 1;
+      todayHistory.types.push(collectionName);
+    } else {
+      history.push({
+        date: today,
+        count: 1,
+        types: [collectionName]
+      });
+    }
+    localStorage.setItem('collection-history', JSON.stringify(history));
 
     const newAchievements = [...stats.achievements];
     
@@ -288,12 +329,15 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
               schedules={schedules} 
               onUpdateSchedule={updateSchedule}
             />
+            <AppInfo />
           </div>
         );
       case 'sharing':
         return <ImprovedFamilySharing schedules={schedules} onImportSchedules={importSchedules} user={user} />;
       case 'stats':
         return <Gamification schedules={schedules} />;
+      case 'streak':
+        return <StreakPage />;
       case 'backup':
         return <BackupManager schedules={schedules} onImportSchedules={importSchedules} />;
       default:
@@ -312,36 +356,37 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
   const tabs = [
     { key: 'overview', label: 'Home', icon: Home, emoji: '🏠' },
     { key: 'calendar', label: 'Calendario', icon: Calendar, emoji: '📅' },
-    { key: 'settings', label: 'Impostazioni', icon: Settings, emoji: '⚙️' },
-    { key: 'sharing', label: 'Famiglia', icon: Users, emoji: '👨‍👩‍👧‍👦' },
+    { key: 'streak', label: 'Streak', icon: Flame, emoji: '🔥' },
     { key: 'stats', label: 'Statistiche', icon: BarChart3, emoji: '🎮' },
-    { key: 'backup', label: 'Backup', icon: Save, emoji: '💾' }
+    { key: 'sharing', label: 'Famiglia', icon: Users, emoji: '👨‍👩‍👧‍👦' },
+    { key: 'backup', label: 'Backup', icon: Save, emoji: '💾' },
+    { key: 'settings', label: 'Impostazioni', icon: Settings, emoji: '⚙️' }
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 pb-24">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-green-100 sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                <Trash className="h-6 w-6 text-white" />
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Trash className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent truncate">
                   Fuori il sacco
                 </h1>
-                <p className="text-sm text-gray-600">Ricordati di portare fuori la spazzatura!</p>
+                <p className="text-xs sm:text-sm text-gray-600 truncate hidden sm:block">Ricordati di portare fuori la spazzatura!</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-shrink-0">
               <Button
                 onClick={() => setShowAddDialog(true)}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-xs sm:text-sm px-2 sm:px-4 h-8 sm:h-10"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Aggiungi
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Aggiungi</span>
               </Button>
             </div>
           </div>

@@ -36,8 +36,16 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
 
     setLoading(true);
     try {
-      // Genera un codice univoco
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      // Genera un codice univoco di 6 caratteri alfanumerici
+      const generateCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      };
+      const code = generateCode();
       
       // Salva nel database se l'utente è loggato
       if (user) {

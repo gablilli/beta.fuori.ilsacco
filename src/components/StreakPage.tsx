@@ -101,7 +101,7 @@ export const StreakPage = () => {
             </div>
             {stats.lastCollection && (
               <div className="text-xs text-gray-500 mt-2">
-                Ultimo conferimento: {format(parseISO(stats.lastCollection), 'dd/MM/yyyy', { locale: it })}
+                Ultimo conferimento: {format(new Date(stats.lastCollection), 'dd/MM/yyyy', { locale: it })}
               </div>
             )}
           </div>

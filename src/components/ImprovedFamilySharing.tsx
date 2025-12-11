@@ -132,10 +132,11 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
       code: code
     };
     
-    // Fix for Unicode characters (emojis) - convert to UTF-8 first
+    // Use modern approach for UTF-8 encoding with emojis
     const jsonString = JSON.stringify(data);
-    const encoded = btoa(unescape(encodeURIComponent(jsonString)));
-    localStorage.setItem(`share-code-${code}`, encoded);
+    const utf8Bytes = new TextEncoder().encode(jsonString);
+    const base64 = btoa(String.fromCharCode(...utf8Bytes));
+    localStorage.setItem(`share-code-${code}`, base64);
     setShareCode(code);
     setIsDialogOpen(true);
   };
@@ -191,8 +192,13 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
     try {
       const localData = localStorage.getItem(`share-code-${importCode.trim().toUpperCase()}`);
       if (localData) {
-        // Fix for Unicode characters (emojis) - decode from UTF-8
-        const jsonString = decodeURIComponent(escape(atob(localData)));
+        // Use modern approach for UTF-8 decoding with emojis
+        const binaryString = atob(localData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const jsonString = new TextDecoder().decode(bytes);
         const decoded = JSON.parse(jsonString);
         const importedSchedules: WasteSchedule[] = decoded.schedules.map((s: any, index: number) => ({
           id: Date.now().toString() + index,
@@ -212,7 +218,12 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
         });
       } else {
         // Prova decodifica diretta (vecchio sistema)
-        const jsonString = decodeURIComponent(escape(atob(importCode.trim())));
+        const binaryString = atob(importCode.trim());
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const jsonString = new TextDecoder().decode(bytes);
         const decoded = JSON.parse(jsonString);
         if (!decoded.schedules || !Array.isArray(decoded.schedules)) {
           throw new Error('Formato non valido');

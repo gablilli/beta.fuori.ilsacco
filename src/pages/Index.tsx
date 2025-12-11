@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Calendar, Trash, Plus, Settings, Bell, Home, Users, BarChart3, Save, Info, Flame } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,37 +105,46 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
     }
   }, [schedules, isLoading]);
 
-  // Calculate next collection dates
+  // Calculate next collection dates - using a ref to avoid infinite loop
+  const schedulesRef = useRef(schedules);
+  schedulesRef.current = schedules;
+  
   useEffect(() => {
-    const updatedSchedules = schedules.map(schedule => {
-      const today = new Date();
-      const currentDay = today.getDay();
-      
-      let nextCollection = new Date(today);
-      let daysUntilNext = 7;
-      
-      for (const day of schedule.days) {
-        let daysUntil = day - currentDay;
-        if (daysUntil <= 0) {
-          daysUntil += 7;
+    const calculateNextCollections = () => {
+      const updatedSchedules = schedulesRef.current.map(schedule => {
+        const today = new Date();
+        const currentDay = today.getDay();
+        
+        let nextCollection = new Date(today);
+        let daysUntilNext = 7;
+        
+        for (const day of schedule.days) {
+          let daysUntil = day - currentDay;
+          if (daysUntil <= 0) {
+            daysUntil += 7;
+          }
+          if (daysUntil < daysUntilNext) {
+            daysUntilNext = daysUntil;
+          }
         }
-        if (daysUntil < daysUntilNext) {
-          daysUntilNext = daysUntil;
-        }
+        
+        nextCollection.setDate(today.getDate() + daysUntilNext);
+        
+        return {
+          ...schedule,
+          nextCollection
+        };
+      });
+      
+      if (JSON.stringify(updatedSchedules) !== JSON.stringify(schedulesRef.current)) {
+        setSchedules(updatedSchedules);
       }
-      
-      nextCollection.setDate(today.getDate() + daysUntilNext);
-      
-      return {
-        ...schedule,
-        nextCollection
-      };
-    });
+    };
     
-    if (JSON.stringify(updatedSchedules) !== JSON.stringify(schedules)) {
-      setSchedules(updatedSchedules);
+    if (schedulesRef.current.length > 0) {
+      calculateNextCollections();
     }
-  }, [schedules]);
+  }, []);
 
   // Programma reminder quando cambiano gli schedule o l'orario
   useEffect(() => {

@@ -132,7 +132,9 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
       code: code
     };
     
-    const encoded = btoa(JSON.stringify(data));
+    // Fix for Unicode characters (emojis) - convert to UTF-8 first
+    const jsonString = JSON.stringify(data);
+    const encoded = btoa(unescape(encodeURIComponent(jsonString)));
     localStorage.setItem(`share-code-${code}`, encoded);
     setShareCode(code);
     setIsDialogOpen(true);
@@ -189,7 +191,9 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
     try {
       const localData = localStorage.getItem(`share-code-${importCode.trim().toUpperCase()}`);
       if (localData) {
-        const decoded = JSON.parse(atob(localData));
+        // Fix for Unicode characters (emojis) - decode from UTF-8
+        const jsonString = decodeURIComponent(escape(atob(localData)));
+        const decoded = JSON.parse(jsonString);
         const importedSchedules: WasteSchedule[] = decoded.schedules.map((s: any, index: number) => ({
           id: Date.now().toString() + index,
           type: s.type,
@@ -208,7 +212,8 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
         });
       } else {
         // Prova decodifica diretta (vecchio sistema)
-        const decoded = JSON.parse(atob(importCode.trim()));
+        const jsonString = decodeURIComponent(escape(atob(importCode.trim())));
+        const decoded = JSON.parse(jsonString);
         if (!decoded.schedules || !Array.isArray(decoded.schedules)) {
           throw new Error('Formato non valido');
         }

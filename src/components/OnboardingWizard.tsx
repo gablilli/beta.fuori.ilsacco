@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { CheckCircle, ArrowRight, Recycle, Upload } from "lucide-react";
 import { DaySelector } from './DaySelector';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import type { WasteSchedule } from '@/pages/Index';
 
 interface OnboardingWizardProps {
@@ -84,7 +85,41 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
 
     setIsImporting(true);
     try {
-      // Try to load from localStorage
+      // First, try to fetch from Supabase database
+      const { data: calendar } = await supabase
+        .from('shared_calendars')
+        .select(`
+          *,
+          shared_schedules (*)
+        `)
+        .eq('share_code', familyCode.trim().toUpperCase())
+        .single();
+
+      if (calendar && calendar.shared_schedules) {
+        const importedSchedules = calendar.shared_schedules.map((s: any) => ({
+          type: s.type,
+          name: s.name,
+          days: s.days,
+          color: s.color,
+          icon: s.icon
+        }));
+
+        onComplete(importedSchedules);
+        
+        toast({
+          title: "✅ Importazione Riuscita!",
+          description: `${importedSchedules.length} promemoria importati dal database`
+        });
+        
+        setIsImporting(false);
+        return;
+      }
+    } catch (error) {
+      console.log('Codice non trovato nel database, provo in locale:', error);
+    }
+
+    // Fallback: Try to load from localStorage
+    try {
       const localData = localStorage.getItem(`share-code-${familyCode.trim().toUpperCase()}`);
       if (localData) {
         // Use modern approach for UTF-8 decoding with emojis
@@ -108,42 +143,17 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
         
         toast({
           title: "✅ Importazione Riuscita!",
-          description: `${importedSchedules.length} promemoria importati`
+          description: `${importedSchedules.length} promemoria importati da locale`
         });
       } else {
-        // Try direct decode (old system)
-        const binaryString = atob(familyCode.trim());
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const jsonString = new TextDecoder().decode(bytes);
-        const decoded = JSON.parse(jsonString);
-        
-        if (!decoded.schedules || !Array.isArray(decoded.schedules)) {
-          throw new Error('Formato non valido');
-        }
-
-        const importedSchedules = decoded.schedules.map((s: any) => ({
-          type: s.type,
-          name: s.name,
-          days: s.days,
-          color: s.color,
-          icon: s.icon
-        }));
-
-        onComplete(importedSchedules);
-        
-        toast({
-          title: "✅ Importazione Riuscita!",
-          description: `${importedSchedules.length} promemoria importati`
-        });
+        // Code not found anywhere
+        throw new Error('Codice non trovato');
       }
     } catch (error) {
       console.error('Import error:', error);
       toast({
         title: "Codice Non Valido",
-        description: "Il codice inserito non è valido. Controlla e riprova.",
+        description: "Il codice inserito non è valido o non è stato trovato. Controlla e riprova.",
         variant: "destructive"
       });
     } finally {

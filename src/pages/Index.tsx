@@ -25,8 +25,8 @@ import { VacationMode } from '@/components/VacationMode';
 import { ImprovedFamilySharing } from '@/components/ImprovedFamilySharing';
 import { BackupManager } from '@/components/BackupManager';
 import { AuthWrapper } from '@/components/AuthWrapper';
-import { ImprovedWeatherWidget } from '@/components/ImprovedWeatherWidget';
 import { StreakWidget } from '@/components/StreakWidget';
+import { CompactCalendarWidget } from '@/components/CompactCalendarWidget';
 import { AppInfo } from '@/components/AppInfo';
 import { StreakPage } from '@/components/StreakPage';
 import { User, Session } from '@supabase/supabase-js';
@@ -347,7 +347,7 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
             />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <StreakWidget onNavigateToStreak={() => setActiveTab('streak')} />
-              <ImprovedWeatherWidget />
+              <CompactCalendarWidget schedules={schedules} />
             </div>
           </div>
         );

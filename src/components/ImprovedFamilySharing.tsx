@@ -135,7 +135,12 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
     // Use modern approach for UTF-8 encoding with emojis
     const jsonString = JSON.stringify(data);
     const utf8Bytes = new TextEncoder().encode(jsonString);
-    const base64 = btoa(String.fromCharCode(...utf8Bytes));
+    // Convert to binary string properly handling large arrays
+    let binaryString = '';
+    for (let i = 0; i < utf8Bytes.length; i++) {
+      binaryString += String.fromCharCode(utf8Bytes[i]);
+    }
+    const base64 = btoa(binaryString);
     localStorage.setItem(`share-code-${code}`, base64);
     setShareCode(code);
     setIsDialogOpen(true);

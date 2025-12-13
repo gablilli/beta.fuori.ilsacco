@@ -86,7 +86,9 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
     setIsImporting(true);
     try {
       // First, try to fetch from Supabase database
-      const { data: calendar } = await supabase
+      console.log('Tentativo di importazione codice:', familyCode.trim().toUpperCase());
+      
+      const { data: calendar, error: dbError } = await supabase
         .from('shared_calendars')
         .select(`
           *,
@@ -95,7 +97,9 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
         .eq('share_code', familyCode.trim().toUpperCase())
         .single();
 
-      if (calendar && calendar.shared_schedules) {
+      console.log('Risultato database:', { calendar, dbError });
+
+      if (calendar && calendar.shared_schedules && calendar.shared_schedules.length > 0) {
         const importedSchedules = calendar.shared_schedules.map((s: any) => ({
           type: s.type,
           name: s.name,
@@ -114,13 +118,13 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
         setIsImporting(false);
         return;
       }
-    } catch (error) {
-      console.log('Codice non trovato nel database, provo in locale:', error);
-    }
 
-    // Fallback: Try to load from localStorage
-    try {
+      // If database query failed or no data, try localStorage
+      console.log('Database non ha restituito dati, provo localStorage');
+      
       const localData = localStorage.getItem(`share-code-${familyCode.trim().toUpperCase()}`);
+      console.log('LocalStorage data:', localData ? 'trovato' : 'non trovato');
+      
       if (localData) {
         // Use modern approach for UTF-8 decoding with emojis
         const binaryString = atob(localData);
@@ -130,6 +134,10 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
         }
         const jsonString = new TextDecoder().decode(bytes);
         const decoded = JSON.parse(jsonString);
+        
+        if (!decoded.schedules || !Array.isArray(decoded.schedules) || decoded.schedules.length === 0) {
+          throw new Error('Formato del codice non valido');
+        }
         
         const importedSchedules = decoded.schedules.map((s: any) => ({
           type: s.type,
@@ -147,13 +155,13 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
         });
       } else {
         // Code not found anywhere
-        throw new Error('Codice non trovato');
+        throw new Error('Codice non trovato in nessuna posizione');
       }
     } catch (error) {
       console.error('Import error:', error);
       toast({
         title: "Codice Non Valido",
-        description: "Il codice inserito non è valido o non è stato trovato. Controlla e riprova.",
+        description: "Il codice inserito non è valido o non è stato trovato. Verifica che il codice sia corretto e riprova.",
         variant: "destructive"
       });
     } finally {

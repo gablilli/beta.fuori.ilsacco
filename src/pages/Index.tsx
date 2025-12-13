@@ -23,10 +23,10 @@ import { useToast } from '@/hooks/use-toast';
 import { CalendarView } from '@/components/CalendarView';
 import { VacationMode } from '@/components/VacationMode';
 import { ImprovedFamilySharing } from '@/components/ImprovedFamilySharing';
-import { Gamification } from '@/components/Gamification';
 import { BackupManager } from '@/components/BackupManager';
 import { AuthWrapper } from '@/components/AuthWrapper';
-import { ImprovedWeatherWidget } from '@/components/ImprovedWeatherWidget';
+import { StreakWidget } from '@/components/StreakWidget';
+import { CompactCalendarWidget } from '@/components/CompactCalendarWidget';
 import { AppInfo } from '@/components/AppInfo';
 import { StreakPage } from '@/components/StreakPage';
 import { User, Session } from '@supabase/supabase-js';
@@ -334,10 +334,8 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
         );
       case 'sharing':
         return <ImprovedFamilySharing schedules={schedules} onImportSchedules={importSchedules} user={user} />;
-      case 'stats':
-        return <Gamification schedules={schedules} />;
       case 'streak':
-        return <StreakPage />;
+        return <StreakPage schedules={schedules} />;
       case 'backup':
         return <BackupManager schedules={schedules} onImportSchedules={importSchedules} />;
       default:
@@ -347,7 +345,10 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
               schedules={schedules} 
               onMarkCollectionDone={handleMarkCollectionDone}
             />
-            <ImprovedWeatherWidget />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <StreakWidget onNavigateToStreak={() => setActiveTab('streak')} />
+              <CompactCalendarWidget schedules={schedules} />
+            </div>
           </div>
         );
     }
@@ -357,7 +358,6 @@ const Index = ({ user, session, onShowAuth, onSignOut }: IndexProps = {}) => {
     { key: 'overview', label: 'Home', icon: Home, emoji: '🏠' },
     { key: 'calendar', label: 'Calendario', icon: Calendar, emoji: '📅' },
     { key: 'streak', label: 'Streak', icon: Flame, emoji: '🔥' },
-    { key: 'stats', label: 'Statistiche', icon: BarChart3, emoji: '🎮' },
     { key: 'sharing', label: 'Famiglia', icon: Users, emoji: '👨‍👩‍👧‍👦' },
     { key: 'backup', label: 'Backup', icon: Save, emoji: '💾' },
     { key: 'settings', label: 'Impostazioni', icon: Settings, emoji: '⚙️' }

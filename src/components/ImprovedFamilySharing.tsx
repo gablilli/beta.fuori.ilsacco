@@ -36,8 +36,16 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
 
     setLoading(true);
     try {
-      // Genera un codice univoco
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      // Genera un codice univoco di 6 caratteri alfanumerici
+      const generateCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      };
+      const code = generateCode();
       
       // Salva nel database se l'utente è loggato
       if (user) {
@@ -124,8 +132,16 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
       code: code
     };
     
-    const encoded = btoa(JSON.stringify(data));
-    localStorage.setItem(`share-code-${code}`, encoded);
+    // Use modern approach for UTF-8 encoding with emojis
+    const jsonString = JSON.stringify(data);
+    const utf8Bytes = new TextEncoder().encode(jsonString);
+    // Convert to binary string properly handling large arrays
+    let binaryString = '';
+    for (let i = 0; i < utf8Bytes.length; i++) {
+      binaryString += String.fromCharCode(utf8Bytes[i]);
+    }
+    const base64 = btoa(binaryString);
+    localStorage.setItem(`share-code-${code}`, base64);
     setShareCode(code);
     setIsDialogOpen(true);
   };
@@ -181,7 +197,14 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
     try {
       const localData = localStorage.getItem(`share-code-${importCode.trim().toUpperCase()}`);
       if (localData) {
-        const decoded = JSON.parse(atob(localData));
+        // Use modern approach for UTF-8 decoding with emojis
+        const binaryString = atob(localData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const jsonString = new TextDecoder().decode(bytes);
+        const decoded = JSON.parse(jsonString);
         const importedSchedules: WasteSchedule[] = decoded.schedules.map((s: any, index: number) => ({
           id: Date.now().toString() + index,
           type: s.type,
@@ -200,7 +223,13 @@ export const ImprovedFamilySharing = ({ schedules, onImportSchedules, user }: Im
         });
       } else {
         // Prova decodifica diretta (vecchio sistema)
-        const decoded = JSON.parse(atob(importCode.trim()));
+        const binaryString = atob(importCode.trim());
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const jsonString = new TextDecoder().decode(bytes);
+        const decoded = JSON.parse(jsonString);
         if (!decoded.schedules || !Array.isArray(decoded.schedules)) {
           throw new Error('Formato non valido');
         }

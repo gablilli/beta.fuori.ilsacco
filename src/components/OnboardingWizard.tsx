@@ -3,8 +3,12 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, ArrowRight, Recycle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CheckCircle, ArrowRight, Recycle, Upload } from "lucide-react";
 import { DaySelector } from './DaySelector';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import type { WasteSchedule } from '@/pages/Index';
 
 interface OnboardingWizardProps {
@@ -21,6 +25,10 @@ const wasteTypes = [
 
 export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [showFamilyCodeInput, setShowFamilyCodeInput] = useState(false);
+  const [familyCode, setFamilyCode] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const { toast } = useToast();
   const [selectedWastes, setSelectedWastes] = useState<Array<{
     type: string;
     name: string;
@@ -62,6 +70,102 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
       setSelectedWastes(prev => [...prev, currentWasteConfig]);
       setCurrentWasteConfig(null);
       setCurrentStep(0);
+    }
+  };
+
+  const handleImportFamilyCode = async () => {
+    if (!familyCode.trim()) {
+      toast({
+        title: "Codice mancante",
+        description: "Inserisci un codice famiglia valido",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      // First, try to fetch from Supabase database
+      console.log('Tentativo di importazione codice:', familyCode.trim().toUpperCase());
+      
+      const { data: calendar, error: dbError } = await supabase
+        .from('shared_calendars')
+        .select(`
+          *,
+          shared_schedules (*)
+        `)
+        .eq('share_code', familyCode.trim().toUpperCase())
+        .single();
+
+      console.log('Risultato database:', { calendar, dbError });
+
+      if (calendar && calendar.shared_schedules && calendar.shared_schedules.length > 0) {
+        const importedSchedules = calendar.shared_schedules.map((s: any) => ({
+          type: s.type,
+          name: s.name,
+          days: s.days,
+          color: s.color,
+          icon: s.icon
+        }));
+
+        onComplete(importedSchedules);
+        
+        toast({
+          title: "✅ Importazione Riuscita!",
+          description: `${importedSchedules.length} promemoria importati dal database`
+        });
+        
+        setIsImporting(false);
+        return;
+      }
+
+      // If database query failed or no data, try localStorage
+      console.log('Database non ha restituito dati, provo localStorage');
+      
+      const localData = localStorage.getItem(`share-code-${familyCode.trim().toUpperCase()}`);
+      console.log('LocalStorage data:', localData ? 'trovato' : 'non trovato');
+      
+      if (localData) {
+        // Use modern approach for UTF-8 decoding with emojis
+        const binaryString = atob(localData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const jsonString = new TextDecoder().decode(bytes);
+        const decoded = JSON.parse(jsonString);
+        
+        if (!decoded.schedules || !Array.isArray(decoded.schedules) || decoded.schedules.length === 0) {
+          throw new Error('Formato del codice non valido');
+        }
+        
+        const importedSchedules = decoded.schedules.map((s: any) => ({
+          type: s.type,
+          name: s.name,
+          days: s.days,
+          color: s.color,
+          icon: s.icon
+        }));
+
+        onComplete(importedSchedules);
+        
+        toast({
+          title: "✅ Importazione Riuscita!",
+          description: `${importedSchedules.length} promemoria importati da locale`
+        });
+      } else {
+        // Code not found anywhere
+        throw new Error('Codice non trovato in nessuna posizione');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        title: "Codice Non Valido",
+        description: "Il codice inserito non è valido o non è stato trovato. Verifica che il codice sia corretto e riprova.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -107,6 +211,59 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
                   </Badge>
                 ))}
               </div>
+            </div>
+          )}
+
+          {showFamilyCodeInput ? (
+            <Card className="mb-8 border-blue-200 bg-blue-50">
+              <CardHeader>
+                <CardTitle>Inserisci Codice Famiglia</CardTitle>
+                <CardDescription>
+                  Hai un codice da un membro della famiglia? Inseriscilo qui per importare il calendario
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="family-code">Codice Famiglia</Label>
+                  <Input
+                    id="family-code"
+                    placeholder="Es: ABC123"
+                    value={familyCode}
+                    onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
+                    className="mt-2"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleImportFamilyCode}
+                    disabled={isImporting || !familyCode.trim()}
+                    className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isImporting ? 'Importazione...' : 'Importa'}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowFamilyCodeInput(false);
+                      setFamilyCode('');
+                    }}
+                    variant="outline"
+                  >
+                    Annulla
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="text-center mb-6">
+              <Button
+                onClick={() => setShowFamilyCodeInput(true)}
+                variant="outline"
+                className="border-blue-300 text-blue-600 hover:bg-blue-50"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Ho un codice famiglia
+              </Button>
             </div>
           )}
 
